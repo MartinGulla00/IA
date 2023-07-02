@@ -32,6 +32,7 @@ class ExpectimaxAgent(Agent):
         self.player = player
         self.opponent = 3 - player
         self.max_depth = max_depth
+    
 
     def next_action(self, board):
         action, _ = self.expectimax(board, self.player, self.max_depth)
@@ -77,9 +78,9 @@ class ExpectimaxAgent(Agent):
         opponent_sandwiches = self.count_sandwiches(board, opponent)
 
         # These weights can be tuned according to the importance you want to give each factor.
-        line_weight = 10
-        potential_win_weight = 100
-        sandwich_weight = 5
+        line_weight = 1
+        potential_win_weight = 200
+        sandwich_weight = 20
 
         utility = (line_weight * player_lines
                 + potential_win_weight * player_potential_wins
@@ -141,10 +142,6 @@ class ExpectimaxAgent(Agent):
         return count == 2  # A potential win requires two of the player's tokens and one empty space.
 
     def check_sandwich(self, board: Board, x: int, y: int, dx: int, dy: int, player: int):
-        x += dx
-        y += dy
-        if not self.in_board(board, x, y) or board[x][y] not in [0, 3 - player]:
-            return False
         x += dx
         y += dy
         if not self.in_board(board, x, y) or board[x][y] != player:
