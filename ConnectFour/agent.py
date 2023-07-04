@@ -72,11 +72,11 @@ class QLearningAgent(Agent):
                 current_state = self.encode_state(obs)
                 action = self.next_action(obs)
                 reward, done = self.take_action(obs, action)
+                obs.add_tile(action, self.player)  # <-- Aquí se actualiza obs
                 next_state = self.encode_state(obs)
                 self.update_q_table(current_state, action, next_state, reward, done)
                 episode_reward += reward
             self.episode_rewards.append(episode_reward)
-
             # At the end of each episode, print out the total number of iterations
             if verbose:
                 print(f"Episode {episode + 1} completed after {iteration_count} iterations.")
@@ -96,18 +96,43 @@ class QLearningAgent(Agent):
         previous_board = obs.clone()  # Clone the board before the action is taken
         success = obs.add_tile(action, self.player)
         done = obs.is_final()
+
+        player = self.player
+        opponent = 3 - player  # Assumed that players are 1 and 2
+
+        player_lines = self.count_lines(obs, player)
+        opponent_lines = self.count_lines(obs, opponent)
+        
+        player_potential_wins = self.count_potential_wins(obs, player)
+        opponent_potential_wins = self.count_potential_wins(obs, opponent)
+
+        player_sandwiches = self.count_sandwiches(obs, player)
+        opponent_sandwiches = self.count_sandwiches(obs, opponent)
+
+        # These weights can be tuned according to the importance you want to give each factor.
+        line_weight = 10
+        potential_win_weight = 100
+        sandwich_weight = 5
+
+        reward = (line_weight * player_lines
+                + potential_win_weight * player_potential_wins
+                + sandwich_weight * player_sandwiches
+                - line_weight * opponent_lines
+                - potential_win_weight * opponent_potential_wins
+                - sandwich_weight * opponent_sandwiches)
+
         if done:
             if obs.winner == self.player:
-                return 2, True
+                reward += 500  # Big reward when the agent wins
             elif obs.is_full():
-                return 0, True
-            else:
-                return self.heuristic_utility(obs), False
-        elif not success:  # Reward of -1 if the action is invalid
-            return -1, False
-        else:
-            reward = self.heuristic_utility(obs) - self.heuristic_utility(previous_board)  # Reward the agent for making "sanguches"
-            return reward, False
+                reward -= 500  # Big penalty when the board is full and the agent didn't win
+            return reward, done  # <-- Modificado aquí
+
+        elif not success:  # Penalty if the action is invalid
+            reward -= 50
+
+        return reward, done
+
 
     def heuristic_utility(self, board: Board):
         utility = 0
@@ -128,6 +153,69 @@ class QLearningAgent(Agent):
                     utility -= 1
 
         return utility
+
+    def count_lines(self, board: Board, player: int):
+        count = 0
+        for i in range(board.heigth):
+            for j in range(board.length):
+                if board[i][j] == player:
+                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                        if self.check_line(board, i, j, dx, dy, player):
+                            count += 1
+        return count
+
+    def count_potential_wins(self, board: Board, player: int):
+        count = 0
+        for i in range(board.heigth):
+            for j in range(board.length):
+                if board[i][j] == player:
+                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                        if self.check_potential_win(board, i, j, dx, dy, player):
+                            count += 1
+        return count
+
+    def count_sandwiches(self, board: Board, player: int):
+        count = 0
+        for i in range(board.heigth):
+            for j in range(board.length):
+                if board[i][j] == player:
+                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                        if self.check_sandwich(board, i, j, dx, dy, player):
+                            count += 1
+        return count
+
+    def check_line(self, board: Board, x: int, y: int, dx: int, dy: int, player: int):
+        for _ in range(3):  # Change this to suit the number of tokens required for a line.
+            x += dx
+            y += dy
+            if not self.in_board(board, x, y) or board[x][y] != player:
+                return False
+        return True
+
+    def check_potential_win(self, board: Board, x: int, y: int, dx: int, dy: int, player: int):
+        count = 0
+        for _ in range(3):  # Change this to suit the number of tokens required for a potential win.
+            x += dx
+            y += dy
+            if not self.in_board(board, x, y) or board[x][y] not in [0, player]:
+                return False
+            if board[x][y] == player:
+                count += 1
+        return count == 2  # A potential win requires two of the player's tokens and one empty space.
+
+    def check_sandwich(self, board: Board, x: int, y: int, dx: int, dy: int, player: int):
+        x += dx
+        y += dy
+        if not self.in_board(board, x, y) or board[x][y] not in [0, 3 - player]:
+            return False
+        x += dx
+        y += dy
+        if not self.in_board(board, x, y) or board[x][y] != player:
+            return False
+        return True  # A sandwich requires one of the opponent's tokens between two of the player's tokens.
+
+    def in_board(self, board: Board, x: int, y: int):
+        return 0 <= x < board.heigth and 0 <= y < board.length
 
 
 class ExpectimaxAgent(Agent):
