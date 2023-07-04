@@ -32,8 +32,17 @@ class ExpectimaxAgent(Agent):
         self.player = player
         self.opponent = 3 - player
         self.max_depth = max_depth
+    
 
     def next_action(self, board):
+        # Verificar si existe una jugada ganadora y realizarla
+        for action in board.get_posible_actions():
+            child = board.clone()
+            child.add_tile(action, self.player)
+            if child.is_final():
+                return action
+
+        # Si no existe una jugada ganadora, continuar con el expectimax
         action, _ = self.expectimax(board, self.player, self.max_depth)
         return action
 
@@ -69,7 +78,7 @@ class ExpectimaxAgent(Agent):
 
         player_lines = self.count_lines(board, player)
         opponent_lines = self.count_lines(board, opponent)
-        
+
         player_potential_wins = self.count_potential_wins(board, player)
         opponent_potential_wins = self.count_potential_wins(board, opponent)
 
@@ -77,19 +86,19 @@ class ExpectimaxAgent(Agent):
         opponent_sandwiches = self.count_sandwiches(board, opponent)
 
         # These weights can be tuned according to the importance you want to give each factor.
-        line_weight = 10
-        potential_win_weight = 100
-        sandwich_weight = 5
+        line_weight = 20
+        potential_win_weight = 1000
+        potential_lose_weight = 2000
+        sandwich_weight = 200
 
         utility = (line_weight * player_lines
                 + potential_win_weight * player_potential_wins
                 + sandwich_weight * player_sandwiches
                 - line_weight * opponent_lines
-                - potential_win_weight * opponent_potential_wins
+                - potential_lose_weight * opponent_potential_wins
                 - sandwich_weight * opponent_sandwiches)
 
         return utility
-
 
     def count_lines(self, board: Board, player: int):
         count = 0
@@ -98,26 +107,6 @@ class ExpectimaxAgent(Agent):
                 if board[i][j] == player:
                     for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
                         if self.check_line(board, i, j, dx, dy, player):
-                            count += 1
-        return count
-
-    def count_potential_wins(self, board: Board, player: int):
-        count = 0
-        for i in range(board.heigth):
-            for j in range(board.length):
-                if board[i][j] == player:
-                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
-                        if self.check_potential_win(board, i, j, dx, dy, player):
-                            count += 1
-        return count
-
-    def count_sandwiches(self, board: Board, player: int):
-        count = 0
-        for i in range(board.heigth):
-            for j in range(board.length):
-                if board[i][j] == player:
-                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
-                        if self.check_sandwich(board, i, j, dx, dy, player):
                             count += 1
         return count
 
@@ -130,26 +119,48 @@ class ExpectimaxAgent(Agent):
         return True
 
     def check_potential_win(self, board: Board, x: int, y: int, dx: int, dy: int, player: int):
+        opponent = 3 - player
+        tokens = [board[x + dx * i][y + dy * i] if self.in_board(board, x + dx * i, y + dy * i) else opponent for i in range(4)]
+        return (tokens.count(player) == 3 and tokens.count(0) == 1) \
+                or (tokens == [player, opponent, player, 0]) \
+                or (tokens == [0, opponent, player, player]) \
+                or (tokens == [player, 0, player]) # Este es el nuevo caso "X # X"
+
+
+    def count_sandwiches(self, board: Board, player: int):
         count = 0
-        for _ in range(3):  # Change this to suit the number of tokens required for a potential win.
-            x += dx
-            y += dy
-            if not self.in_board(board, x, y) or board[x][y] not in [0, player]:
-                return False
-            if board[x][y] == player:
-                count += 1
-        return count == 2  # A potential win requires two of the player's tokens and one empty space.
+        for i in range(board.heigth):
+            for j in range(board.length):
+                if board[i][j] == player:
+                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                        if dy != 0:  # Solo se consideran sándwiches en horizontal y diagonal
+                            if self.check_sandwich(board, i, j, dx, dy, player):
+                                count += 1
+        return count
 
     def check_sandwich(self, board: Board, x: int, y: int, dx: int, dy: int, player: int):
         x += dx
         y += dy
-        if not self.in_board(board, x, y) or board[x][y] not in [0, 3 - player]:
+        opponent = 3 - player
+        if not self.in_board(board, x, y) or board[x][y] != opponent:
             return False
+
+        # comprobar si hay una pieza del jugador en el otro lado
         x += dx
         y += dy
         if not self.in_board(board, x, y) or board[x][y] != player:
             return False
-        return True  # A sandwich requires one of the opponent's tokens between two of the player's tokens.
+
+        return True  # un sándwich requiere una pieza del oponente entre dos piezas del jugador
+    def count_potential_wins(self, board: Board, player: int):
+        count = 0
+        for i in range(board.heigth):
+            for j in range(board.length):
+                if board[i][j] == player:
+                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                        if self.check_potential_win(board, i, j, dx, dy, player):
+                            count += 1
+        return count
 
     def in_board(self, board: Board, x: int, y: int):
         return 0 <= x < board.heigth and 0 <= y < board.length
