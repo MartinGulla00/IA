@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from board import Board
 import numpy as np
+import matplotlib.pyplot as plt
+from collections import defaultdict
 
 class Agent(ABC):
 
@@ -26,9 +28,6 @@ class Agent(ABC):
     def heuristic_utility(self, board: Board):
         pass
 
-from collections import defaultdict
-from collections import defaultdict
-
 class QLearningAgent(Agent):
     def __init__(self, board_shape, player, learning_rate=0.1, discount_factor=0.9, initial_epsilon=0.9, epsilon_decay=0.999):
         self.board_shape = board_shape
@@ -38,6 +37,7 @@ class QLearningAgent(Agent):
         self.epsilon = initial_epsilon
         self.epsilon_decay = epsilon_decay
         self.q_table = defaultdict(lambda: np.zeros(board_shape[1]))
+        self.episode_rewards = []  # <--- Agregado aquí
 
     def encode_state(self, board):
         state = ""
@@ -55,27 +55,46 @@ class QLearningAgent(Agent):
 
     def update_q_table(self, state, action, next_state, reward, done):
         current_q = self.q_table[state][action]
-        max_next_q = np.max(self.q_table[next_state]) if not done else 0
-        new_q = current_q + self.learning_rate * (reward + self.discount_factor * max_next_q - current_q)
+        next_q = np.mean(self.q_table[next_state]) if not done else 0
+        new_q = current_q + self.learning_rate * (reward + self.discount_factor * next_q - current_q)
         self.q_table[state][action] = new_q
         self.epsilon *= self.epsilon_decay  # decay epsilon
 
-    def train(self, num_episodes, verbose=False):
+
+    def train(self, num_episodes, verbose=False, plot=True):
         for episode in range(num_episodes):
             obs = Board(self.board_shape[0], self.board_shape[1])  # Create a new board for each episode
             done = False
+            episode_reward = 0  # Track the total reward for the episode
+            iteration_count = 0  # Track the number of iterations for each episode
             while not done:
+                iteration_count += 1
                 current_state = self.encode_state(obs)
                 action = self.next_action(obs)
                 reward, done = self.take_action(obs, action)
                 next_state = self.encode_state(obs)
                 self.update_q_table(current_state, action, next_state, reward, done)
-                if verbose:
-                    print("Episode:", episode, "Action:", action, "Reward:", reward)
-                    obs.render()
+                episode_reward += reward
+            self.episode_rewards.append(episode_reward)
+
+            # At the end of each episode, print out the total number of iterations
+            if verbose:
+                print(f"Episode {episode + 1} completed after {iteration_count} iterations.")
+
+        if plot:
+            self.plot_rewards()
+
+
+    def plot_rewards(self):
+        plt.plot(self.episode_rewards)
+        plt.xlabel("Episode")
+        plt.ylabel("Total Reward")
+        plt.title("Reward per Episode")
+        plt.show()
 
     def take_action(self, obs, action):
-        success = obs.add_tile(action, self.player)  # Use the add_tile method instead of step
+        previous_board = obs.clone()  # Clone the board before the action is taken
+        success = obs.add_tile(action, self.player)
         done = obs.is_final()
         if done:
             if obs.winner == self.player:
@@ -85,13 +104,13 @@ class QLearningAgent(Agent):
             else:
                 return self.heuristic_utility(obs), False
         elif not success:  # Reward of -1 if the action is invalid
-            return -1, False  
+            return -1, False
         else:
-            return 0, False  # No immediate reward for valid moves
+            reward = self.heuristic_utility(obs) - self.heuristic_utility(previous_board)  # Reward the agent for making "sanguches"
+            return reward, False
 
     def heuristic_utility(self, board: Board):
         utility = 0
-
         opponent = 2 if self.player == 1 else 1
 
         for row in board._grid:
