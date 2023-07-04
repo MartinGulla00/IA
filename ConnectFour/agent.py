@@ -3,6 +3,7 @@ from board import Board
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
+import pickle
 
 class Agent(ABC):
 
@@ -61,7 +62,7 @@ class QLearningAgent(Agent):
         self.epsilon *= self.epsilon_decay  # decay epsilon
 
 
-    def train(self, num_episodes, verbose=False, plot=True):
+    def train(self, num_episodes, verbose=False, plot=True, save_every=100):
         for episode in range(num_episodes):
             obs = Board(self.board_shape[0], self.board_shape[1])  # Create a new board for each episode
             done = False
@@ -76,14 +77,27 @@ class QLearningAgent(Agent):
                 next_state = self.encode_state(obs)
                 self.update_q_table(current_state, action, next_state, reward, done)
                 episode_reward += reward
+
             self.episode_rewards.append(episode_reward)
             # At the end of each episode, print out the total number of iterations
             if verbose:
                 print(f"Episode {episode + 1} completed after {iteration_count} iterations.")
+                
+            # Save the Q-table every 'save_every' episodes
+            if (episode + 1) % save_every == 0:
+                self.save_q_table("q_table_{}.pkl".format(episode + 1))
 
         if plot:
             self.plot_rewards()
 
+
+    def save_q_table(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(dict(self.q_table), f)
+
+    def load_q_table(self, filename):
+        with open(filename, 'rb') as f:
+            self.q_table = defaultdict(lambda: np.zeros(self.board_shape[1]), pickle.load(f))
 
     def plot_rewards(self):
         plt.plot(self.episode_rewards)
