@@ -11,7 +11,7 @@ from gym.error import DependencyNotInstalled
 class MountainCarEnv(gym.Env):
     metadata = {
         "render_modes": ["human", "rgb_array"],
-        "render_fps": 30,
+        "render_fps": 1000,
     }
 
     def __init__(self, render_mode: Optional[str] = 'rgb_array', goal_velocity=0):
