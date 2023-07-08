@@ -204,7 +204,7 @@ class MinimaxAgent(Agent):
         for i in range(board.heigth):
             for j in range(board.length):
                 if board[i][j] == player:
-                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                    for dx, dy in [(1, 0), (1, 1), (1, -1)]:
                         if self.check_sandwich(board, i, j, dx, dy, player):
                             count += 1
         return count
@@ -345,7 +345,7 @@ class MinimaxAgentConAlphaBetaPruning(Agent):
         for i in range(board.heigth):
             for j in range(board.length):
                 if board[i][j] == player:
-                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                    for dx, dy in [(1, 0), (1, 1), (1, -1)]:
                         if self.check_sandwich(board, i, j, dx, dy, player):
                             count += 1
         return count
@@ -394,7 +394,7 @@ class MinimaxAgentMejorado(Agent):
         action, _ = self.minimax(board, self.player, self.max_depth, float('-inf'), float('inf'))
         
         # Add a small level of randomness to the action selection
-        random_factor = 0.1
+        random_factor = 0
         if random.random() < random_factor:
             actions = board.get_posible_actions()
             action = random.choice(actions)
@@ -500,7 +500,7 @@ class MinimaxAgentMejorado(Agent):
         for i in range(board.heigth):
             for j in range(board.length):
                 if board[i][j] == player:
-                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                    for dx, dy in [(1, 0), (1, 1), (1, -1)]:
                         if self.check_sandwich(board, i, j, dx, dy, player):
                             count += 1
         return count
@@ -562,6 +562,8 @@ class ExpectimaxAgent(Agent):
                 _, value = self.expectimax(child, self.opponent, depth - 1)
                 if value > best_value:
                     best_value = value
+                    best_action = action
+                if value == best_value and random.random() < 0.5:
                     best_action = action
             return best_action, best_value
         else:  # Averaging player (opponent)
@@ -627,7 +629,7 @@ class ExpectimaxAgent(Agent):
         for i in range(board.heigth):
             for j in range(board.length):
                 if board[i][j] == player:
-                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                    for dx, dy in [(1, 0), (1, 1), (1, -1)]:
                         if self.check_sandwich(board, i, j, dx, dy, player):
                             count += 1
         return count
