@@ -525,6 +525,9 @@ class MinimaxAgentMejorado(Agent):
         return count == 2
     
     def check_sandwich(self, board: Board, x: int, y: int, dx: int, dy: int, player: int):
+        if dx == 1 and dy == 0:  # Ignore vertical sandwiches
+            return False
+
         x += dx
         y += dy
         if not self.in_board(board, x, y) or board[x][y] not in [0, 3 - player]:
