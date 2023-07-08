@@ -11,10 +11,6 @@ class Agent(ABC):
     @abstractmethod
     def next_action(self, obs):
         pass
-    
-    @abstractmethod
-    def heuristic_utility(self, board: Board):
-        pass
 
     def heuristic_utility(self, board: Board):
         player = self.player
@@ -68,7 +64,7 @@ class Agent(ABC):
         for i in range(board.heigth):
             for j in range(board.length):
                 if board[i][j] == player:
-                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                    for dx, dy in [(1, 0), (1, 1), (1, -1)]:
                         if self.check_sandwich(board, i, j, dx, dy, player):
                             count += 1
         return count
@@ -287,6 +283,8 @@ class ExpectimaxAgent(Agent):
                 _, value = self.expectimax(child, self.opponent, depth - 1)
                 if value > best_value:
                     best_value = value
+                    best_action = action
+                if value == best_value and random.random() < 0.5:
                     best_action = action
             return best_action, best_value
         else:  # Chance player (opponent)
