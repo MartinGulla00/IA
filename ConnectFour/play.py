@@ -34,4 +34,4 @@ def play_vs_loaded_agent(env, agent, render=True, first=True):
         play_vs_other_agent(env, enemy_agent, agent, render)
 
 def load_enemy_agent():
-    return SpaceGPTAgent(2, 6)
+    return SpaceGPTAgent(2, 4)

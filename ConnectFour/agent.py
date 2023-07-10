@@ -151,7 +151,8 @@ class MinimaxAgentConAlphaBetaPruning(Agent):
 
     def next_action(self, board):
         # Verificar si existe una jugada ganadora y realizarla
-        for action in board.get_posible_actions():
+        actions = board.get_posible_actions()
+        for action in actions:
             child = board.clone()
             child.add_tile(action, self.player)
             if child.is_final():
