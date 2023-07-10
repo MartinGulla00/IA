@@ -151,5 +151,4 @@ class Board:
         for _ in self._grid:
             print("-----", end="")
         print("")
-    
-    
+       
