@@ -150,13 +150,13 @@ class MinimaxAgentConAlphaBetaPruning(Agent):
         self.max_depth = max_depth
 
     def next_action(self, board):
+        # Verificar si existe una jugada ganadora y realizarla
+        for action in board.get_posible_actions():
+            child = board.clone()
+            child.add_tile(action, self.player)
+            if child.is_final():
+                return action
         action, _ = self.minimax(board, self.player, self.max_depth, float('-inf'), float('inf'))
-        
-        # Add a small level of randomness to the action selection
-        random_factor = 0
-        if random.random() < random_factor:
-            actions = board.get_posible_actions()
-            action = random.choice(actions)
         
         return action
 
@@ -193,111 +193,6 @@ class MinimaxAgentConAlphaBetaPruning(Agent):
                 if beta <= alpha:
                     break
             return best_action, best_value
-
-class MinimaxAgentMejorado(Agent):
-    def __init__(self, player, max_depth=3):
-        self.player = player
-        self.opponent = 3 - player
-        self.max_depth = max_depth
-        self.transposition_table = {}  # Initialize the transposition table
-
-    def next_action(self, board):
-        action, _ = self.minimax(board, self.player, self.max_depth, float('-inf'), float('inf'))
-        
-        # Add a small level of randomness to the action selection
-        random_factor = 0
-        if random.random() < random_factor:
-            actions = board.get_posible_actions()
-            action = random.choice(actions)
-        
-        return action
-
-    def minimax(self, board: Board, player, depth, alpha, beta):
-        if depth == 0 or board.is_final():
-            return None, self.heuristic_utility(board)
-
-        state_key = self.encode_state(board)
-        if state_key in self.transposition_table:  # Check if the state has already been evaluated
-            return self.transposition_table[state_key]
-
-        actions = board.get_posible_actions()
-        actions.sort(key=lambda x: abs(x - board.length // 2))  # Sort actions based on their distance to the center column
-
-        if player == self.player:  # Maximizing player
-            best_value = float('-inf')
-            best_action = None
-            for action in actions:
-                child = board.clone()
-                child.add_tile(action, player)
-                _, value = self.minimax(child, self.opponent, depth - 1, alpha, beta)
-                if value > best_value:
-                    best_value = value
-                    best_action = action
-                alpha = max(alpha, best_value)
-                if beta <= alpha:
-                    break
-        else:  # Minimizing player (opponent)
-            best_value = float('inf')
-            best_action = None
-            for action in actions:
-                child = board.clone()
-                child.add_tile(action, player)
-                _, value = self.minimax(child, self.player, depth - 1, alpha, beta)
-                if value < best_value:
-                    best_value = value
-                    best_action = action
-                beta = min(beta, best_value)
-                if beta <= alpha:
-                    break
-
-        self.transposition_table[state_key] = (best_action, best_value)  # Store the result in the transposition table
-        return best_action, best_value
-    
-    def encode_state(self, board):
-        state = ""
-        for row in board._grid:
-            state += "".join(map(str, row))
-        return state
-    
-class ExpectimaxAgent(Agent):
-    def __init__(self, player, max_depth=3):
-        self.player = player
-        self.opponent = 3 - player
-        self.max_depth = max_depth
-
-    def next_action(self, board):
-        action, _ = self.expectimax(board, self.player, self.max_depth)
-        return action
-
-    def expectimax(self, board: Board, player, depth):
-        if depth == 0 or board.is_final():
-            return None, self.heuristic_utility(board)
-
-        actions = board.get_posible_actions()
-        if player == self.player:  # Maximizing player
-            best_value = float('-inf')
-            best_action = None
-            for action in actions:
-                child = board.clone()
-                child.add_tile(action, player)
-                _, value = self.expectimax(child, self.opponent, depth - 1)
-                if value > best_value:
-                    best_value = value
-                    best_action = action
-                if value == best_value and random.random() < 0.5:
-                    best_action = action
-            return best_action, best_value
-        else:  # Chance player (opponent)
-            value = 0
-            for action in actions:
-                child = board.clone()
-                child.add_tile(action, player)
-                _, child_value = self.expectimax(child, self.player, depth - 1)
-                value += child_value
-            value /= len(actions)
-            return None, value
-
-
 
         
 class ExpectimaxAgentMejorado(Agent):
@@ -305,20 +200,19 @@ class ExpectimaxAgentMejorado(Agent):
         self.player = player
         self.opponent = 3 - player
         self.max_depth = max_depth
-        self.transposition_table = {}
+        self.transposition_table = {}  # Initialize the transposition table
 
     def next_action(self, board):
-        action, _ = self.expectimax(board, self.player, self.max_depth)
-        
-        # Add a small level of randomness to the action selection
-        random_factor = 0
-        if random.random() < random_factor:
-            actions = board.get_posible_actions()
-            action = random.choice(actions)
-        
+        # Verificar si existe una jugada ganadora y realizarla
+        for action in board.get_posible_actions():
+            child = board.clone()
+            child.add_tile(action, self.player)
+            if child.is_final():
+                return action
+        action, _ = self.expectimax(board, self.player, self.max_depth, float('-inf'), float('inf'))
         return action
     
-    def expectimax(self, board: Board, player, depth):
+    def expectimax(self, board: Board, player, depth, alpha, beta):
         if depth == 0 or board.is_final():
             return None, self.heuristic_utility(board)
         
@@ -327,7 +221,8 @@ class ExpectimaxAgentMejorado(Agent):
             return self.transposition_table[state_key]
         
         actions = board.get_posible_actions()
-        actions.sort(key=lambda x: abs(x - board.length // 2))  # Sort actions based on their distance to the center column
+        best_value = float('-inf')
+        best_action = None
 
         if player == self.player:  # Maximizing player
             best_value = float('-inf')
@@ -335,19 +230,35 @@ class ExpectimaxAgentMejorado(Agent):
             for action in actions:
                 child = board.clone()
                 child.add_tile(action, player)
-                _, value = self.expectimax(child, self.opponent, depth - 1)
+                _, value = self.expectimax(child, self.opponent, depth - 1, alpha, beta)
                 if value > best_value:
                     best_value = value
                     best_action = action
+                if value == best_value and random.random() < 0.5:
+                    best_action = action
+                alpha = max(alpha, best_value)
+                if beta <= alpha:
+                    break
         else:  # Chance player (opponent)
             value = 0
             for action in actions:
                 child = board.clone()
                 child.add_tile(action, player)
-                _, child_value = self.expectimax(child, self.player, depth - 1)
+                _, child_value = self.expectimax(child, self.player, depth - 1, alpha, beta)
                 value += child_value
             value /= len(actions)
-            return None, value
+            best_value = value
+            best_action = None
+        
+        self.transposition_table[state_key] = (best_action, best_value)  # Store the result in the transposition table
+        return best_action, best_value
+        
+    def encode_state(self, board):
+        state = ""
+        for row in board._grid:
+            state += "".join(map(str, row))
+        return state
+    
 
 class InputAgent(Agent):
 

@@ -26,9 +26,12 @@ def play_vs_other_agent(env, agent1, agent2, render=True):
     final_msg = "The winner is " + agent1Name if winner == 1 else "The winner is " + agent2Name if winner == 2 else "It's a draw"
     print(final_msg)
 
-def play_vs_loaded_agent(env, agent, render=True):
+def play_vs_loaded_agent(env, agent, render=True, first=True):
     enemy_agent = load_enemy_agent()
-    play_vs_other_agent(env, agent, enemy_agent, render)
+    if first:
+        play_vs_other_agent(env, agent, enemy_agent, render)
+    else:
+        play_vs_other_agent(env, enemy_agent, agent, render)
 
 def load_enemy_agent():
-    return SpaceGPTAgent(2, 4)
+    return SpaceGPTAgent(2, 6)
